@@ -1,0 +1,10 @@
+target/
+logs/
+test-output/
+*.log
+*.dump
+headers.txt
+body.txt
+.idea/
+*.iml
+.DS_Store
