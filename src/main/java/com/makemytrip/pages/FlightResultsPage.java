@@ -83,6 +83,31 @@ public class FlightResultsPage extends BasePage {
     }
 
     /**
+     * Checks if the bot protection (Akamai) returned a raw "200-OK" response.
+     */
+    public boolean isBotBlocked() {
+        try {
+            String pageSource = driver.getPageSource();
+            if (pageSource != null) {
+                String trimmed = pageSource.trim();
+                if (trimmed.startsWith("200-OK") || trimmed.matches("(?s)^<html[^>]*><head[^>]*></head><body[^>]*><pre[^>]*>\\s*200-OK.*")) {
+                    return true;
+                }
+            }
+            try {
+                WebElement body = driver.findElement(By.tagName("body"));
+                String bodyText = body.getText();
+                if (bodyText != null && bodyText.trim().startsWith("200-OK")) {
+                    return true;
+                }
+            } catch (Exception ignored) {
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
+    /**
      * Waits for flight search results to load and dismisses any overlays.
      */
     public void waitForResultsToLoad() {
@@ -109,17 +134,8 @@ public class FlightResultsPage extends BasePage {
             }
         }
 
-        // Check if page rendered as raw 200-OK text from Akamai and refresh if so
-        try {
-            String pageSource = driver.getPageSource();
-            if (pageSource != null && (pageSource.contains("200-OK") || pageSource.contains("Pretty-print"))) {
-                logger.warn("Detected raw '200-OK' response from server. Refreshing page with established session cookies...");
-                WaitUtils.sleep(2000);
-                driver.navigate().refresh();
-                WaitUtils.sleep(3000);
-            }
-        } catch (Exception ignored) {
-        }
+        int maxRetries = 3;
+        int refreshAttempts = 0;
 
         dismissPopups();
 
@@ -128,6 +144,23 @@ public class FlightResultsPage extends BasePage {
         boolean found = false;
 
         while (System.currentTimeMillis() - startTime < timeoutMs) {
+            if (isBotBlocked()) {
+                if (refreshAttempts < maxRetries) {
+                    refreshAttempts++;
+                    logger.warn("Detected bot-block ('200-OK'). Attempt {} of {} to refresh and bypass block...", refreshAttempts, maxRetries);
+                    try {
+                        driver.navigate().refresh();
+                        WaitUtils.waitForPageLoad(driver, 20);
+                        WaitUtils.sleep(5000);
+                    } catch (Exception e) {
+                        logger.warn("Error during refresh retry #{}: {}", refreshAttempts, e.getMessage());
+                    }
+                    continue;
+                } else {
+                    logger.error("Bot-block ('200-OK') persisted after {} refresh retries.", maxRetries);
+                }
+            }
+
             dismissPopups();
             List<WebElement> cards = driver.findElements(flightCards);
             if (!cards.isEmpty()) {

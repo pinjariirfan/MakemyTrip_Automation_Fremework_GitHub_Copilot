@@ -14,6 +14,7 @@ import org.openqa.selenium.firefox.FirefoxOptions;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class DriverFactory {
@@ -47,17 +48,12 @@ public class DriverFactory {
             case "chrome":
             default:
                 ChromeOptions chromeOptions = new ChromeOptions();
+                chromeOptions.addArguments("--disable-blink-features=AutomationControlled");
+                chromeOptions.setExperimentalOption("excludeSwitches", List.of("enable-automation"));
+                chromeOptions.setExperimentalOption("useAutomationExtension", false);
                 chromeOptions.addArguments("--start-maximized");
                 chromeOptions.addArguments("--disable-notifications");
-                chromeOptions.addArguments("--disable-infobars");
-                chromeOptions.addArguments("--disable-blink-features=AutomationControlled");
-                chromeOptions.addArguments("--remote-allow-origins=*");
-                chromeOptions.addArguments("--disable-gpu");
-                chromeOptions.addArguments("--no-sandbox");
-                chromeOptions.addArguments("--disable-dev-shm-usage");
-
-                chromeOptions.setExperimentalOption("excludeSwitches", Collections.singletonList("enable-automation"));
-                chromeOptions.setExperimentalOption("useAutomationExtension", false);
+                chromeOptions.addArguments("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36");
 
                 Map<String, Object> prefs = new HashMap<>();
                 prefs.put("profile.default_content_setting_values.notifications", 2);
@@ -72,12 +68,12 @@ public class DriverFactory {
 
                 ChromeDriver chromeDriver = new ChromeDriver(chromeOptions);
 
-                // Mask navigator.webdriver via CDP script evaluation
+                // Mask navigator.webdriver via CDP script evaluation on new documents
                 try {
                     Map<String, Object> cdpParams = new HashMap<>();
                     cdpParams.put("source",
                             "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});" +
-                            "window.navigator.chrome = { runtime: {} };"
+                            "window.chrome = { runtime: {} };"
                     );
                     chromeDriver.executeCdpCommand("Page.addScriptToEvaluateOnNewDocument", cdpParams);
                 } catch (Exception e) {

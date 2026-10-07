@@ -3,6 +3,7 @@ package com.makemytrip.utils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
@@ -10,6 +11,15 @@ import java.time.Duration;
 import java.util.List;
 
 public class WaitUtils {
+
+    public static void waitForPageLoad(WebDriver driver, int timeoutSeconds) {
+        try {
+            new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds)).until(
+                    d -> ((JavascriptExecutor) d).executeScript("return document.readyState").equals("complete")
+            );
+        } catch (Exception ignored) {
+        }
+    }
 
     public static WebElement waitForVisibility(WebDriver driver, By locator, int timeoutSeconds) {
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(timeoutSeconds));
